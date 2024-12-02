@@ -1,0 +1,38 @@
+{
+  "mappings": {
+    "com/prizowo/enchantmentlevelbreak/mixin/EnchantmentHelper": {
+      "getFullname": "Lnet/minecraft/world/item/enchantment/Enchantment;m_44700_(I)Lnet/minecraft/network/chat/Component;"
+    },
+    "com/prizowo/enchantmentlevelbreak/mixin/Helper": {
+      "storeEnchantment": "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;m_182443_(Lnet/minecraft/resources/ResourceLocation;I)Lnet/minecraft/nbt/CompoundTag;",
+      "setEnchantmentLevel": "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;m_182440_(Lnet/minecraft/nbt/CompoundTag;I)V",
+      "Lnet/minecraft/nbt/CompoundTag;putShort(Ljava/lang/String;S)V": "Lnet/minecraft/nbt/CompoundTag;m_128376_(Ljava/lang/String;S)V",
+      "getEnchantmentLevel(Lnet/minecraft/nbt/CompoundTag;)I": "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;m_182438_(Lnet/minecraft/nbt/CompoundTag;)I"
+    },
+    "com/prizowo/enchantmentlevelbreak/mixin/ItemStackMixin": {
+      "enchant": "Lnet/minecraft/world/item/ItemStack;m_41663_(Lnet/minecraft/world/item/enchantment/Enchantment;I)V"
+    },
+    "com/prizowo/enchantmentlevelbreak/mixin/Command": {
+      "enchant": "Lnet/minecraft/server/commands/EnchantCommand;m_137014_(Lnet/minecraft/commands/CommandSourceStack;Ljava/util/Collection;Lnet/minecraft/world/item/enchantment/Enchantment;I)I"
+    }
+  },
+  "data": {
+    "searge": {
+      "com/prizowo/enchantmentlevelbreak/mixin/EnchantmentHelper": {
+        "getFullname": "Lnet/minecraft/world/item/enchantment/Enchantment;m_44700_(I)Lnet/minecraft/network/chat/Component;"
+      },
+      "com/prizowo/enchantmentlevelbreak/mixin/Helper": {
+        "storeEnchantment": "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;m_182443_(Lnet/minecraft/resources/ResourceLocation;I)Lnet/minecraft/nbt/CompoundTag;",
+        "setEnchantmentLevel": "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;m_182440_(Lnet/minecraft/nbt/CompoundTag;I)V",
+        "Lnet/minecraft/nbt/CompoundTag;putShort(Ljava/lang/String;S)V": "Lnet/minecraft/nbt/CompoundTag;m_128376_(Ljava/lang/String;S)V",
+        "getEnchantmentLevel(Lnet/minecraft/nbt/CompoundTag;)I": "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;m_182438_(Lnet/minecraft/nbt/CompoundTag;)I"
+      },
+      "com/prizowo/enchantmentlevelbreak/mixin/ItemStackMixin": {
+        "enchant": "Lnet/minecraft/world/item/ItemStack;m_41663_(Lnet/minecraft/world/item/enchantment/Enchantment;I)V"
+      },
+      "com/prizowo/enchantmentlevelbreak/mixin/Command": {
+        "enchant": "Lnet/minecraft/server/commands/EnchantCommand;m_137014_(Lnet/minecraft/commands/CommandSourceStack;Ljava/util/Collection;Lnet/minecraft/world/item/enchantment/Enchantment;I)I"
+      }
+    }
+  }
+}

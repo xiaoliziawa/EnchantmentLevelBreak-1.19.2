@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Specification-Title: enchantmentlevelbreak
+Specification-Vendor: PrizOwO
+Specification-Version: 1
+Implementation-Title: enchantmentlevelbreak
+Implementation-Version: 1.0
+Implementation-Vendor: PrizOwO
+Implementation-Timestamp: 2024-12-02T14:59:20+0800
+MixinConfigs: enchantmentlevelbreak.mixins.json
+
