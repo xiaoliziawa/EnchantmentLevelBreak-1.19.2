@@ -8,7 +8,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
 public class CEnchantCommand {
 
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_ENCHANTMENTS = (context, builder) ->
-            SharedSuggestionProvider.suggestResource(Registry.ENCHANTMENT.keySet(), builder);
+            SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENCHANTMENT.keySet(), builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("cenchant")
@@ -60,7 +60,7 @@ public class CEnchantCommand {
             enchantmentId = new ResourceLocation(enchantmentName);
         }
 
-        Enchantment enchantment = Registry.ENCHANTMENT.get(enchantmentId);
+        Enchantment enchantment = BuiltInRegistries.ENCHANTMENT.get(enchantmentId);
 
         if (enchantment == null) {
             source.sendFailure(Component.literal("Invalid enchantment: " + enchantmentName));
@@ -69,9 +69,11 @@ public class CEnchantCommand {
 
         itemStack.enchant(enchantment, level);
 
-        String romanLevel = Enchantmentlevelbreak.intToRoman(level);
         int finalLevel = level;
-        source.sendSuccess( Component.literal("Applied " + enchantment.getFullname(finalLevel).getString() + " "  + " to the item"), true);
+        source.sendSuccess(
+            () -> Component.literal("Applied " + enchantment.getFullname(finalLevel).getString() + " " + " to the item"),
+            true
+        );
 
         return 1;
     }

@@ -5,6 +5,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.commands.EnchantCommand;
 import net.minecraft.world.entity.Entity;
@@ -30,29 +31,29 @@ public class Command {
     @Shadow @Final private static Dynamic2CommandExceptionType ERROR_LEVEL_TOO_HIGH;
 
     @Inject(method = "enchant", at = @At("HEAD"), cancellable = true)
-    private static void tooHigh(CommandSourceStack p_137015_, Collection<? extends Entity> p_137016_, 
-            Enchantment p_137017_, int p_137018_, CallbackInfoReturnable<Integer> cir) throws CommandSyntaxException {
+    private static void tooHigh(CommandSourceStack p_249815_, Collection<? extends Entity> p_248848_, Holder<Enchantment> p_251252_, int p_249941_, CallbackInfoReturnable<Integer> cir) throws CommandSyntaxException {
+        Enchantment enchantment = p_251252_.value();
         
-        if (p_137018_ > p_137017_.getMaxLevel()) {
-            throw ERROR_LEVEL_TOO_HIGH.create(p_137018_, p_137017_.getMaxLevel());
+        if (p_249941_ > enchantment.getMaxLevel()) {
+            throw ERROR_LEVEL_TOO_HIGH.create(p_249941_, enchantment.getMaxLevel());
         }
         
         int i = 0;
 
-        for(Entity entity : p_137016_) {
+        for(Entity entity : p_248848_) {
             if (entity instanceof LivingEntity livingentity) {
                 ItemStack itemstack = livingentity.getMainHandItem();
                 if (!itemstack.isEmpty()) {
-                    if (p_137017_.canEnchant(itemstack) && EnchantmentHelper.isEnchantmentCompatible(EnchantmentHelper.getEnchantments(itemstack).keySet(), p_137017_)) {
-                        itemstack.enchant(p_137017_, p_137018_);
+                    if (enchantment.canEnchant(itemstack) && EnchantmentHelper.isEnchantmentCompatible(EnchantmentHelper.getEnchantments(itemstack).keySet(), enchantment)) {
+                        itemstack.enchant(enchantment, p_249941_);
                         ++i;
-                    } else if (p_137016_.size() == 1) {
+                    } else if (p_248848_.size() == 1) {
                         throw ERROR_INCOMPATIBLE.create(itemstack.getItem().getName(itemstack).getString());
                     }
-                } else if (p_137016_.size() == 1) {
+                } else if (p_248848_.size() == 1) {
                     throw ERROR_NO_ITEM.create(livingentity.getName().getString());
                 }
-            } else if (p_137016_.size() == 1) {
+            } else if (p_248848_.size() == 1) {
                 throw ERROR_NOT_LIVING_ENTITY.create(entity.getName().getString());
             }
         }
@@ -60,21 +61,21 @@ public class Command {
         if (i == 0) {
             throw ERROR_NOTHING_HAPPENED.create();
         } else {
-            Component message;
-            if (p_137016_.size() == 1) {
-                String enchantName = p_137017_.getFullname(p_137018_).getString();
-                String targetName = p_137016_.iterator().next().getDisplayName().getString();
-                message = Component.empty().append(enchantName)
+            if (p_248848_.size() == 1) {
+                String enchantName = enchantment.getFullname(p_249941_).getString();
+                String targetName = p_248848_.iterator().next().getDisplayName().getString();
+                final Component finalMessage = Component.empty().append(enchantName)
                     .append(" has been applied to ")
                     .append(targetName);
+                p_249815_.sendSuccess(() -> finalMessage, true);
             } else {
-                String enchantName = p_137017_.getFullname(p_137018_).getString();
-                message = Component.empty().append(enchantName)
+                String enchantName = enchantment.getFullname(p_249941_).getString();
+                final Component finalMessage = Component.empty().append(enchantName)
                     .append(" has been applied to ")
-                    .append(String.valueOf(p_137016_.size()))
+                    .append(String.valueOf(p_248848_.size()))
                     .append(" items");
+                p_249815_.sendSuccess(() -> finalMessage, true);
             }
-            p_137015_.sendSuccess(message, true);
 
             cir.setReturnValue(i);
         }
