@@ -2,39 +2,39 @@ package com.prizowo.enchantmentlevelbreak;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.core.Registry;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.network.chat.Component;
+import java.util.Map;
 
 public class CEnchantCommand {
-
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_ENCHANTMENTS = (context, builder) ->
             SharedSuggestionProvider.suggestResource(Registry.ENCHANTMENT.keySet(), builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("cenchant")
                 .requires(source -> source.hasPermission(2))
-                .then(Commands.argument("enchantment", StringArgumentType.greedyString())
+                .then(Commands.argument("enchantment", ResourceLocationArgument.id())
                         .suggests(SUGGEST_ENCHANTMENTS)
                         .executes(context -> enchantItem(context.getSource(),
-                                StringArgumentType.getString(context, "enchantment"),
+                                Registry.ENCHANTMENT.get(ResourceLocationArgument.getId(context, "enchantment")),
                                 1))
                         .then(Commands.argument("level", IntegerArgumentType.integer(1))
                                 .executes(context -> enchantItem(context.getSource(),
-                                        StringArgumentType.getString(context, "enchantment"),
+                                        Registry.ENCHANTMENT.get(ResourceLocationArgument.getId(context, "enchantment")),
                                         IntegerArgumentType.getInteger(context, "level"))))));
     }
 
-    private static int enchantItem(CommandSourceStack source, String enchantmentInput, int level) throws CommandSyntaxException {
+    private static int enchantItem(CommandSourceStack source, Enchantment enchantment, int level) throws CommandSyntaxException {
         Player player = source.getPlayerOrException();
         ItemStack itemStack = player.getMainHandItem();
 
@@ -43,35 +43,20 @@ public class CEnchantCommand {
             return 0;
         }
 
-        String[] parts = enchantmentInput.split("\\s+", 2);
-        String enchantmentName = parts[0];
-        if (parts.length > 1) {
-            try {
-                level = Integer.parseInt(parts[1]);
-            } catch (NumberFormatException e) {
-                // 如果第二个部分不是数字，就忽略它
-            }
-        }
-
-        ResourceLocation enchantmentId;
-        if (!enchantmentName.contains(":")) {
-            enchantmentId = new ResourceLocation("minecraft", enchantmentName);
-        } else {
-            enchantmentId = new ResourceLocation(enchantmentName);
-        }
-
-        Enchantment enchantment = Registry.ENCHANTMENT.get(enchantmentId);
-
         if (enchantment == null) {
-            source.sendFailure(Component.literal("Invalid enchantment: " + enchantmentName));
+            source.sendFailure(Component.literal("Invalid enchantment"));
             return 0;
         }
 
-        itemStack.enchant(enchantment, level);
+        Map<Enchantment, Integer> currentEnchantments = EnchantmentHelper.getEnchantments(itemStack);
+        
+        currentEnchantments.remove(enchantment);
+        
+        currentEnchantments.put(enchantment, level);
+        
+        EnchantmentHelper.setEnchantments(currentEnchantments, itemStack);
 
-        String romanLevel = Enchantmentlevelbreak.intToRoman(level);
-        int finalLevel = level;
-        source.sendSuccess( Component.literal("Applied " + enchantment.getFullname(finalLevel).getString() + " "  + " to the item"), true);
+        source.sendSuccess(Component.literal("Applied " + enchantment.getFullname(level).getString() + " to the item"), true);
 
         return 1;
     }
