@@ -7,20 +7,27 @@ import net.minecraft.world.inventory.ItemCombinerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import com.prizowo.enchantmentlevelbreak.config.Config;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
+import java.util.HashMap;
 
 @Mixin(AnvilMenu.class)
 public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     @Shadow private int repairItemCountCost;
     @Shadow private final DataSlot cost = DataSlot.standalone();
+
+    @Unique
+    private static final ThreadLocal<Boolean> IS_PROCESSING = ThreadLocal.withInitial(() -> false);
 
     protected AnvilMenuMixin(MenuType<?> menuType, int containerId, Inventory inventory, ContainerLevelAccess access) {
         super(menuType, containerId, inventory, access);
@@ -28,43 +35,89 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
 
     @Inject(method = "createResult", at = @At("HEAD"), cancellable = true)
     private void onCreateResult(CallbackInfo ci) {
-        ItemStack leftStack = this.inputSlots.getItem(0);
-        ItemStack rightStack = this.inputSlots.getItem(1);
+        if (IS_PROCESSING.get()) {
+            return;
+        }
 
-        if (!leftStack.isEmpty() && !rightStack.isEmpty()) {
-            Map<Enchantment, Integer> rightEnchants = EnchantmentHelper.getEnchantments(rightStack);
-            if (!rightEnchants.isEmpty()) {
-                Map<Enchantment, Integer> leftEnchants = EnchantmentHelper.getEnchantments(leftStack);
-                
-                Map<Enchantment, Integer> resultEnchants = EnchantmentHelper.getEnchantments(leftStack);
+        try {
+            IS_PROCESSING.set(true);
+            ItemStack left = this.inputSlots.getItem(0);
+            ItemStack right = this.inputSlots.getItem(1);
 
-                int totalCost = 0;
-                boolean hasChanges = false;
+            if (!left.isEmpty() && !right.isEmpty()) {
+                enchantmentlevelbreak$handleAnvilOperation(left, right, ci);
+            }
+        } finally {
+            IS_PROCESSING.set(false);
+        }
+    }
 
+    @Unique
+    private void enchantmentlevelbreak$handleAnvilOperation(ItemStack left, ItemStack right, CallbackInfo ci) {
+        Map<Enchantment, Integer> leftEnchants = EnchantmentHelper.getEnchantments(left);
+        Map<Enchantment, Integer> rightEnchants = EnchantmentHelper.getEnchantments(right);
+
+        if (left.getItem() == right.getItem()) {
+            if (!leftEnchants.isEmpty() || !rightEnchants.isEmpty()) {
+                enchantmentlevelbreak$handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
+            }
+            return;
+        }
+
+        if (!rightEnchants.isEmpty() && enchantmentlevelbreak$isEnchantedBook(right)) {
+            if (!Config.allowAnyEnchantment) {
                 for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
-                    Enchantment enchantment = entry.getKey();
-                    int rightLevel = entry.getValue();
-                    int leftLevel = leftEnchants.getOrDefault(enchantment, 0);
-
-                    int newLevel = leftLevel + rightLevel;
-                    
-                    if (newLevel != leftLevel) {
-                        hasChanges = true;
-                        resultEnchants.put(enchantment, newLevel);
-                        totalCost += newLevel;
+                    if (!entry.getKey().canEnchant(left)) {
+                        this.resultSlots.setItem(0, ItemStack.EMPTY);
+                        this.cost.set(0);
+                        ci.cancel();
+                        return;
                     }
                 }
-
-                if (hasChanges) {
-                    ItemStack resultStack = leftStack.copy();
-                    EnchantmentHelper.setEnchantments(resultEnchants, resultStack);
-                    this.resultSlots.setItem(0, resultStack);
-
-                    this.repairItemCountCost = Math.min(totalCost, 50);
-                    this.cost.set(this.repairItemCountCost);
-                    ci.cancel();
-                }
             }
+            enchantmentlevelbreak$handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
         }
+    }
+
+    @Unique
+    private boolean enchantmentlevelbreak$isEnchantedBook(ItemStack stack) {
+        return stack.getItem() == Items.ENCHANTED_BOOK;
+    }
+
+    @Unique
+    private void enchantmentlevelbreak$handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, CallbackInfo ci) {
+        Map<Enchantment, Integer> resultEnchants = new HashMap<>(leftEnchants);
+        int totalCost = 0;
+
+        for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
+            Enchantment enchantment = entry.getKey();
+            int rightLevel = entry.getValue();
+            int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
+
+            int newLevel = enchantmentlevelbreak$calculateNewLevel(leftLevel, rightLevel);
+            resultEnchants.put(enchantment, newLevel);
+            totalCost += newLevel;
+        }
+
+        enchantmentlevelbreak$applyResult(target, resultEnchants, totalCost);
+        ci.cancel();
+    }
+
+    @Unique
+    private int enchantmentlevelbreak$calculateNewLevel(int leftLevel, int rightLevel) {
+        if (Config.allowLevelStacking) {
+            return leftLevel + rightLevel;
+        }
+        return Math.max(leftLevel, rightLevel);
+    }
+
+    @Unique
+    private void enchantmentlevelbreak$applyResult(ItemStack target, Map<Enchantment, Integer> enchantments, int totalCost) {
+        ItemStack result = target.copy();
+        EnchantmentHelper.setEnchantments(enchantments, result);
+        this.resultSlots.setItem(0, result);
+
+        this.repairItemCountCost = Math.min(totalCost, 50);
+        this.cost.set(this.repairItemCountCost);
     }
 } 
