@@ -108,12 +108,9 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
         if (Config.allowLevelStacking) {
             return leftLevel + rightLevel;
         } else {
-            // 使用原版的附魔等级叠加机制
             if (leftLevel == rightLevel) {
-                // 相同等级时，等级+1
-                return Math.min(leftLevel + 1, 10);  // 原版最高10级
+                return leftLevel + 1;
             } else {
-                // 不同等级时，取较高等级
                 return Math.max(leftLevel, rightLevel);
             }
         }
