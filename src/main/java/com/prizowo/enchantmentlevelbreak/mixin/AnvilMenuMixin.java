@@ -45,7 +45,7 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
             ItemStack right = this.inputSlots.getItem(1);
 
             if (!left.isEmpty() && !right.isEmpty()) {
-                enchantmentlevelbreak$handleAnvilOperation(left, right, ci);
+                handleAnvilOperation(left, right, ci);
             }
         } finally {
             IS_PROCESSING.set(false);
@@ -53,18 +53,18 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     }
 
     @Unique
-    private void enchantmentlevelbreak$handleAnvilOperation(ItemStack left, ItemStack right, CallbackInfo ci) {
+    private void handleAnvilOperation(ItemStack left, ItemStack right, CallbackInfo ci) {
         Map<Enchantment, Integer> leftEnchants = EnchantmentHelper.getEnchantments(left);
         Map<Enchantment, Integer> rightEnchants = EnchantmentHelper.getEnchantments(right);
 
         if (left.getItem() == right.getItem()) {
             if (!leftEnchants.isEmpty() || !rightEnchants.isEmpty()) {
-                enchantmentlevelbreak$handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
+                handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
             }
             return;
         }
 
-        if (!rightEnchants.isEmpty() && enchantmentlevelbreak$isEnchantedBook(right)) {
+        if (!rightEnchants.isEmpty() && isEnchantedBook(right)) {
             if (!Config.allowAnyEnchantment) {
                 for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
                     if (!entry.getKey().canEnchant(left)) {
@@ -75,17 +75,17 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
                     }
                 }
             }
-            enchantmentlevelbreak$handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
+            handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
         }
     }
 
     @Unique
-    private boolean enchantmentlevelbreak$isEnchantedBook(ItemStack stack) {
+    private boolean isEnchantedBook(ItemStack stack) {
         return stack.getItem() == Items.ENCHANTED_BOOK;
     }
 
     @Unique
-    private void enchantmentlevelbreak$handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, CallbackInfo ci) {
+    private void handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, CallbackInfo ci) {
         Map<Enchantment, Integer> resultEnchants = new HashMap<>(leftEnchants);
         int totalCost = 0;
 
@@ -94,25 +94,33 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
             int rightLevel = entry.getValue();
             int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
 
-            int newLevel = enchantmentlevelbreak$calculateNewLevel(leftLevel, rightLevel);
+            int newLevel = calculateNewLevel(leftLevel, rightLevel);
             resultEnchants.put(enchantment, newLevel);
             totalCost += newLevel;
         }
 
-        enchantmentlevelbreak$applyResult(target, resultEnchants, totalCost);
+        applyResult(target, resultEnchants, totalCost);
         ci.cancel();
     }
 
     @Unique
-    private int enchantmentlevelbreak$calculateNewLevel(int leftLevel, int rightLevel) {
+    private int calculateNewLevel(int leftLevel, int rightLevel) {
         if (Config.allowLevelStacking) {
             return leftLevel + rightLevel;
+        } else {
+            // 使用原版的附魔等级叠加机制
+            if (leftLevel == rightLevel) {
+                // 相同等级时，等级+1
+                return Math.min(leftLevel + 1, 10);  // 原版最高10级
+            } else {
+                // 不同等级时，取较高等级
+                return Math.max(leftLevel, rightLevel);
+            }
         }
-        return Math.max(leftLevel, rightLevel);
     }
 
     @Unique
-    private void enchantmentlevelbreak$applyResult(ItemStack target, Map<Enchantment, Integer> enchantments, int totalCost) {
+    private void applyResult(ItemStack target, Map<Enchantment, Integer> enchantments, int totalCost) {
         ItemStack result = target.copy();
         EnchantmentHelper.setEnchantments(enchantments, result);
         this.resultSlots.setItem(0, result);
