@@ -4,6 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import com.prizowo.enchantmentlevelbreak.config.Config;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,7 +23,7 @@ public class Helper {
 
     @Inject(method = "getEnchantmentLevel(Lnet/minecraft/nbt/CompoundTag;)I", at = @At("RETURN"), cancellable = true)
     private static void get(CompoundTag p_182439_, CallbackInfoReturnable<Integer> cir) {
-        cir.setReturnValue(Mth.clamp(p_182439_.getInt("lvl"), 0, Integer.MAX_VALUE));
+        cir.setReturnValue(Mth.clamp(p_182439_.getInt("lvl"), 0, Config.maxEnchantmentLevel));
     }
 
     @Inject(method = "setEnchantmentLevel", at = @At("HEAD"), cancellable = true)
