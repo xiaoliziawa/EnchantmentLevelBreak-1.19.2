@@ -65,16 +65,6 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
         }
 
         if (!rightEnchants.isEmpty() && isEnchantedBook(right)) {
-            if (!Config.allowAnyEnchantment) {
-                for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
-                    if (!entry.getKey().canEnchant(left)) {
-                        this.resultSlots.setItem(0, ItemStack.EMPTY);
-                        this.cost.set(0);
-                        ci.cancel();
-                        return;
-                    }
-                }
-            }
             handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
         }
     }
@@ -88,19 +78,30 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     private void handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, CallbackInfo ci) {
         Map<Enchantment, Integer> resultEnchants = new HashMap<>(leftEnchants);
         int totalCost = 0;
+        boolean anyEnchantmentApplied = false;
+        boolean isRightEnchantedBook = isEnchantedBook(target);
 
         for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
             Enchantment enchantment = entry.getKey();
             int rightLevel = entry.getValue();
-            int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
-
-            int newLevel = calculateNewLevel(leftLevel, rightLevel);
-            resultEnchants.put(enchantment, newLevel);
-            totalCost += newLevel;
+            
+            boolean canApply = Config.allowAnyEnchantment || enchantment.canEnchant(target);
+            
+            if (canApply) {
+                int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
+                int newLevel = calculateNewLevel(leftLevel, rightLevel);
+                newLevel = Math.min(newLevel, Config.maxEnchantmentLevel);
+                
+                resultEnchants.put(enchantment, newLevel);
+                totalCost += newLevel;
+                anyEnchantmentApplied = true;
+            }
         }
 
-        applyResult(target, resultEnchants, totalCost);
-        ci.cancel();
+        if (anyEnchantmentApplied) {
+            applyResult(target, resultEnchants, totalCost);
+            ci.cancel();
+        }
     }
 
     @Unique

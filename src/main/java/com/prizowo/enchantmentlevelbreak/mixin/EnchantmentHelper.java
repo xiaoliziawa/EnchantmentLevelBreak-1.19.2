@@ -17,7 +17,9 @@ public class EnchantmentHelper {
     @Inject(method = "getFullname", at = @At("HEAD"), cancellable = true)
     private void modifyEnchantmentName(int level, CallbackInfoReturnable<Component> cir) {
         Enchantment enchantment = (Enchantment) (Object) this;
-        MutableComponent name = Component.translatable(enchantment.getDescriptionId());
+        
+        ChatFormatting nameColor = enchantment.isCurse() ? ChatFormatting.RED : ChatFormatting.GRAY;
+        MutableComponent name = Component.translatable(enchantment.getDescriptionId()).withStyle(nameColor);
         
         if (level != 1) {
             String levelText;
@@ -26,7 +28,7 @@ public class EnchantmentHelper {
             } else {
                 levelText = Config.useRomanNumerals ? enchantmentLevelBreak$intToRoman(level) : String.valueOf(level);
             }
-            name.append(" ").append(Component.literal(levelText).withStyle(ChatFormatting.GRAY));
+            name.append(" ").append(Component.literal(levelText).withStyle(nameColor));
         }
         
         cir.setReturnValue(name);
