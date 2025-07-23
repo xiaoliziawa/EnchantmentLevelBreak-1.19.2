@@ -28,7 +28,6 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
 
     @Unique
     private static final ThreadLocal<Boolean> IS_PROCESSING = ThreadLocal.withInitial(() -> false);
-
     protected AnvilMenuMixin(MenuType<?> menuType, int containerId, Inventory inventory, ContainerLevelAccess access) {
         super(menuType, containerId, inventory, access);
     }
@@ -43,7 +42,6 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
             IS_PROCESSING.set(true);
             ItemStack left = this.inputSlots.getItem(0);
             ItemStack right = this.inputSlots.getItem(1);
-
             if (!left.isEmpty() && !right.isEmpty()) {
                 handleAnvilOperation(left, right, ci);
             }
@@ -56,14 +54,12 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     private void handleAnvilOperation(ItemStack left, ItemStack right, CallbackInfo ci) {
         Map<Enchantment, Integer> leftEnchants = EnchantmentHelper.getEnchantments(left);
         Map<Enchantment, Integer> rightEnchants = EnchantmentHelper.getEnchantments(right);
-
         if (left.getItem() == right.getItem()) {
             if (!leftEnchants.isEmpty() || !rightEnchants.isEmpty()) {
                 handleEnchantmentMerge(left, leftEnchants, rightEnchants, true, ci);
             }
             return;
         }
-
         if (!rightEnchants.isEmpty() && isEnchantedBook(right)) {
             handleEnchantmentMerge(left, leftEnchants, rightEnchants, false, ci);
         }
@@ -79,15 +75,10 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
         Map<Enchantment, Integer> resultEnchants = new HashMap<>(leftEnchants);
         int totalCost = 0;
         boolean anyEnchantmentApplied = false;
-
         for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
             Enchantment enchantment = entry.getKey();
             int rightLevel = entry.getValue();
-
-            // 对于相同物品合成，总是允许附魔等级叠加
-            // 对于附魔书应用，需要检查兼容性
             boolean canApply = isSameItemMerge || Config.allowAnyEnchantment || enchantment.canEnchant(target);
-
             if (canApply) {
                 int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
                 int newLevel = calculateNewLevel(leftLevel, rightLevel);
@@ -98,7 +89,6 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
                 anyEnchantmentApplied = true;
             }
         }
-
         if (anyEnchantmentApplied) {
             applyResult(target, resultEnchants, totalCost);
             ci.cancel();
@@ -108,13 +98,10 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     @Unique
     private int calculateNewLevel(int leftLevel, int rightLevel) {
         if (Config.allowLevelStacking) {
-            // 完全等级叠加：直接相加 (如 5+5=10)
             return leftLevel + rightLevel;
         } else if (Config.allowVanillaLevelStacking && leftLevel == rightLevel) {
-            // 原版等级叠加：相同等级+1 (如 5+5=6)
             return leftLevel + 1;
         } else {
-            // 取较高值 (如 5+3=5, 5+5=5)
             return Math.max(leftLevel, rightLevel);
         }
     }
@@ -124,7 +111,6 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
         ItemStack result = target.copy();
         EnchantmentHelper.setEnchantments(enchantments, result);
         this.resultSlots.setItem(0, result);
-
         this.repairItemCountCost = Math.min(totalCost, 50);
         this.cost.set(this.repairItemCountCost);
     }
