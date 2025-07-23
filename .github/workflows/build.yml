@@ -2,11 +2,11 @@ name: Build and Release
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ 1.20.1-dev ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ main, master ]
+    branches: [ 1.20.1-dev ]
 
 jobs:
   build:
@@ -33,11 +33,21 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
+      - name: List build output
+        run: |
+          echo "Contents of build directory:"
+          ls -la build/ || echo "build directory not found"
+          echo "Contents of build/libs directory:"
+          ls -la build/libs/ || echo "build/libs directory not found"
+          echo "Looking for JAR files:"
+          find . -name "*.jar" -type f || echo "No JAR files found"
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mod-jars
           path: build/libs/*.jar
+          if-no-files-found: error
 
   release:
     needs: build
@@ -53,7 +63,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: mod-jars
-          path: build/libs/
+          path: ./artifacts/
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Contents of artifacts directory:"
+          ls -la ./artifacts/ || echo "artifacts directory not found"
+          echo "Looking for JAR files in artifacts:"
+          find ./artifacts/ -name "*.jar" -type f || echo "No JAR files found in artifacts"
 
       - name: Get version from tag
         id: get_version
@@ -86,6 +103,6 @@ jobs:
 
             ### 📋 更新日志
             请查看提交历史了解详细更改内容。
-          files: build/libs/*.jar
+          files: ./artifacts/*.jar
           draft: false
           prerelease: false
