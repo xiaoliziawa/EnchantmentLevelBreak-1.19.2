@@ -12,6 +12,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import com.prizowo.enchantmentlevelbreak.config.Config;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,7 +25,7 @@ import java.util.HashMap;
 @Mixin(AnvilMenu.class)
 public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     @Shadow private int repairItemCountCost;
-    @Shadow private final DataSlot cost = DataSlot.standalone();
+    @Shadow @Final private DataSlot cost;
 
     @Unique
     private static final ThreadLocal<Boolean> IS_PROCESSING = ThreadLocal.withInitial(() -> false);
@@ -59,23 +60,13 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
 
         if (left.getItem() == right.getItem()) {
             if (!leftEnchants.isEmpty() || !rightEnchants.isEmpty()) {
-                handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
+                handleEnchantmentMerge(left, leftEnchants, rightEnchants, true, ci);
             }
             return;
         }
 
         if (!rightEnchants.isEmpty() && isEnchantedBook(right)) {
-            if (!Config.allowAnyEnchantment) {
-                for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
-                    if (!entry.getKey().canEnchant(left)) {
-                        this.resultSlots.setItem(0, ItemStack.EMPTY);
-                        this.cost.set(0);
-                        ci.cancel();
-                        return;
-                    }
-                }
-            }
-            handleEnchantmentMerge(left, leftEnchants, rightEnchants, ci);
+            handleEnchantmentMerge(left, leftEnchants, rightEnchants, false, ci);
         }
     }
 
@@ -85,34 +76,46 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
     }
 
     @Unique
-    private void handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, CallbackInfo ci) {
+    private void handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, boolean isSameItemMerge, CallbackInfo ci) {
+        // If both stacking options are disabled, let vanilla handle it
+
+        if (!Config.allowLevelStacking && !Config.allowVanillaLevelStacking && !Config.allowAnyEnchantment) {
+            return;
+        }
+
         Map<Enchantment, Integer> resultEnchants = new HashMap<>(leftEnchants);
         int totalCost = 0;
+        boolean anyEnchantmentApplied = false;
 
         for (Map.Entry<Enchantment, Integer> entry : rightEnchants.entrySet()) {
             Enchantment enchantment = entry.getKey();
             int rightLevel = entry.getValue();
-            int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
+            boolean canApply = isSameItemMerge || Config.allowAnyEnchantment || enchantment.canEnchant(target);
+            if (canApply) {
+                int leftLevel = resultEnchants.getOrDefault(enchantment, 0);
+                int newLevel = calculateNewLevel(leftLevel, rightLevel);
+                newLevel = Math.min(newLevel, Config.maxEnchantmentLevel);
 
-            int newLevel = calculateNewLevel(leftLevel, rightLevel);
-            resultEnchants.put(enchantment, newLevel);
-            totalCost += newLevel;
+                resultEnchants.put(enchantment, newLevel);
+                totalCost += newLevel;
+                anyEnchantmentApplied = true;
+            }
         }
 
-        applyResult(target, resultEnchants, totalCost);
-        ci.cancel();
+        if (anyEnchantmentApplied) {
+            applyResult(target, resultEnchants, totalCost);
+            ci.cancel();
+        }
     }
 
     @Unique
     private int calculateNewLevel(int leftLevel, int rightLevel) {
         if (Config.allowLevelStacking) {
             return leftLevel + rightLevel;
+        } else if (Config.allowVanillaLevelStacking && leftLevel == rightLevel) {
+            return leftLevel + 1;
         } else {
-            if (leftLevel == rightLevel) {
-                return leftLevel + 1;
-            } else {
-                return Math.max(leftLevel, rightLevel);
-            }
+            return Math.max(leftLevel, rightLevel);
         }
     }
 
