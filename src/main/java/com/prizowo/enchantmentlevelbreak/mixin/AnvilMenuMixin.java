@@ -77,7 +77,6 @@ public abstract class AnvilMenuMixin extends ItemCombinerMenu {
 
     @Unique
     private void handleEnchantmentMerge(ItemStack target, Map<Enchantment, Integer> leftEnchants, Map<Enchantment, Integer> rightEnchants, boolean isSameItemMerge, CallbackInfo ci) {
-        // If both stacking options are disabled, let vanilla handle it
         if (!Config.allowLevelStacking && !Config.allowVanillaLevelStacking && !Config.allowAnyEnchantment) {
             return;
         }
